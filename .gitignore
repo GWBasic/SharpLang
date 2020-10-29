@@ -1,0 +1,6 @@
+.DS_Store
+.vs/
+SharpLang/bin
+SharpLang/obj
+*/bin
+*/obj

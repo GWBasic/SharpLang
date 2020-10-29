@@ -13,14 +13,60 @@ namespace SharpLang
         /// </summary>
         /// <param name="task"></param>
         void QueueToRun(Func<Task> task);
+    }
+
+    public static class FiberEx
+    {
+        /// <summary>
+        /// The task is queued to run and runs in the background in isolation
+        /// </summary>
+        /// <param name="task"></param>
+        public static void QueueToRun(this IFiber fiber, Action task)
+        {
+            fiber.QueueToRun(() =>
+            {
+                task();
+                return Task.FromResult(IntPtr.Zero);
+            });
+        }
 
         /// <summary>
-        /// Schedules the task to run at an indetermine time in the future
+        /// Schedules the task to run at a time in the future
         /// </summary>
         /// <param name="delay">How long to wait until running the task</param>
         /// <param name="task">The task to run</param>
         /// <returns></returns>
-        IDisposable ScheduleOnce(TimeSpan delay, Func<Task> task);
+        public static IDisposable ScheduleOnce(this IFiber fiber, TimeSpan delay, Func<Task> task)
+        {
+            var keepRunning = true;
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(delay);
+
+                if (keepRunning)
+                {
+                    fiber.QueueToRun(task);
+                }
+            });
+
+            return new Disposable(() => keepRunning = false);
+        }
+
+        /// <summary>
+        /// Schedules the task to run at a time in the future
+        /// </summary>
+        /// <param name="delay">How long to wait until running the task</param>
+        /// <param name="task">The task to run</param>
+        /// <returns></returns>
+        public static IDisposable ScheduleOnce(this IFiber fiber, TimeSpan delay, Action task)
+        {
+            return fiber.ScheduleOnce(delay, () =>
+            {
+                task();
+                return Task.FromResult<IntPtr>(IntPtr.Zero);
+            });
+        }
 
         /// <summary>
         /// Schedules the task to run, after a delay, on an interval
@@ -29,20 +75,83 @@ namespace SharpLang
         /// <param name="interval">How often to run the task</param>
         /// <param name="task">The task to run</param>
         /// <returns></returns>
-        IDisposable ScheduleOnInterval(TimeSpan? delay, TimeSpan interval, Func<Task> task);
+        public static IDisposable ScheduleOnInterval(this IFiber fiber, TimeSpan? delay, TimeSpan interval, Func<Task> task)
+        {
+            var keepRunning = true;
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(delay ?? interval);
+
+                while (keepRunning)
+                {
+                    fiber.QueueToRun(task);
+                    await Task.Delay(interval);
+                }
+            });
+
+            return new Disposable(() => keepRunning = false);
+        }
 
         /// <summary>
         /// Does not return until the task completes on the fiber, essentially behaving as a lock
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        Task Lock(Func<Task> task);
+        public static Task<T> Lock<T>(this IFiber fiber, Func<Task<T>> task)
+        {
+            var taskCompletionSource = new TaskCompletionSource<T>();
+
+            fiber.QueueToRun(async () =>
+            {
+                try
+                {
+                    taskCompletionSource.SetResult(await task());
+                }
+                catch (Exception exception)
+                {
+                    taskCompletionSource.SetException(exception);
+                }
+            });
+
+            return taskCompletionSource.Task;
+        }
 
         /// <summary>
         /// Does not return until the task completes on the fiber, essentially behaving as a lock
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        Task<T> Lock<T>(Func<Task<T>> task);
+        public static Task Lock(this IFiber fiber, Func<Task> task)
+        {
+            return fiber.Lock<IntPtr>(async () =>
+            {
+                await task();
+                return IntPtr.Zero;
+            });
+        }
+
+        /// <summary>
+        /// Waits for all tasks in the queue to complete
+        /// </summary>
+        /// <returns></returns>
+        public static Task Wait(this IFiber fiber)
+        {
+            var taskCompletionSource = new TaskCompletionSource<IntPtr>();
+
+            fiber.QueueToRun(() =>
+            {
+                try
+                {
+                    taskCompletionSource.SetResult(IntPtr.Zero);
+                }
+                catch (Exception exception)
+                {
+                    taskCompletionSource.SetException(exception);
+                }
+            });
+
+            return taskCompletionSource.Task;
+        }
     }
 }

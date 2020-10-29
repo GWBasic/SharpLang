@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpLang.Tests", "SharpLang.Tests\SharpLang.Tests.csproj", "{73F90A26-A5AE-48DC-A60D-C89EAA99EB1C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,5 +21,9 @@ Global
 		{5DDB92B6-F819-47B9-B9B9-DF2AE4F3B79E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5DDB92B6-F819-47B9-B9B9-DF2AE4F3B79E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5DDB92B6-F819-47B9-B9B9-DF2AE4F3B79E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{73F90A26-A5AE-48DC-A60D-C89EAA99EB1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73F90A26-A5AE-48DC-A60D-C89EAA99EB1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73F90A26-A5AE-48DC-A60D-C89EAA99EB1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73F90A26-A5AE-48DC-A60D-C89EAA99EB1C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
