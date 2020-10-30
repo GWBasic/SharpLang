@@ -12,3 +12,8 @@ Differences from Retlang will be:
 - Multicast event syntax (via +=)
 - Allow synchronous use of fibers
 - Timespans to represent time
+- Ability to "lock" if needed
+
+SharpLang will also build on some lessons learned from working with Retlang for almost a decade:
+- Better debugging support
+- Better introspection and fiber saftey
