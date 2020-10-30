@@ -93,6 +93,23 @@ namespace SharpLang
             return new Disposable(() => keepRunning = false);
         }
 
+
+        /// <summary>
+        /// Schedules the task to run, after a delay, on an interval
+        /// </summary>
+        /// <param name="delay">The delay for the first instance of running the task. If this is null, the task will be queued immediately</param>
+        /// <param name="interval">How often to run the task</param>
+        /// <param name="task">The task to run</param>
+        /// <returns></returns>
+        public static IDisposable ScheduleOnInterval(this IFiber fiber, TimeSpan? delay, TimeSpan interval, Action task)
+        {
+            return fiber.ScheduleOnInterval(delay, interval, () =>
+            {
+                task();
+                return Task.FromResult(IntPtr.Zero);
+            });
+        }
+
         /// <summary>
         /// Does not return until the task completes on the fiber, essentially behaving as a lock
         /// </summary>
@@ -122,6 +139,16 @@ namespace SharpLang
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
+        public static Task<T> Lock<T>(this IFiber fiber, Func<T> task)
+        {
+            return fiber.Lock<T>(() => Task.FromResult(task()));
+        }
+
+        /// <summary>
+        /// Does not return until the task completes on the fiber, essentially behaving as a lock
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
         public static Task Lock(this IFiber fiber, Func<Task> task)
         {
             return fiber.Lock<IntPtr>(async () =>
@@ -129,6 +156,16 @@ namespace SharpLang
                 await task();
                 return IntPtr.Zero;
             });
+        }
+
+        /// <summary>
+        /// Does not return until the task completes on the fiber, essentially behaving as a lock
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
+        public static Task Lock(this IFiber fiber, Action task)
+        {
+            return fiber.Lock(() => Task.FromResult(IntPtr.Zero) as Task);
         }
 
         /// <summary>

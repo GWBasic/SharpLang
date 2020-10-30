@@ -11,19 +11,26 @@ namespace SharpLang.Tests
     public class FiberTests
     {
         Fiber fiber = new Fiber();
-        List<Exception> exceptions;
+        List<Exception> exceptions = new List<Exception>();
+
+        public FiberTests()
+        {
+            this.fiber.ExceptionHandler = exceptions.Add;
+        }
 
         [SetUp]
         public void SetUp()
         {
-            this.exceptions = new List<Exception>();
-            this.fiber.ExceptionHandler = exceptions.Add;
+            this.exceptions.Clear();
         }
 
         [TearDown]
         public void TearDown()
         {
-            Assert.AreEqual(0, this.exceptions.Count, "Unhandled exceptions in the fiber");
+            if (this.exceptions.Count > 0)
+            {
+                throw this.exceptions[0];
+            }
         }
 
         [Test]
@@ -64,12 +71,10 @@ namespace SharpLang.Tests
             await this.fiber.Wait();
 
             Assert.AreEqual(5, value);
-
-            Assert.Pass();
         }
 
         [Test]
-        public async Task TestSchedule()
+        public async Task Schedule()
         {
             var taskCompletionSource = new TaskCompletionSource<IntPtr>();
 
@@ -82,12 +87,10 @@ namespace SharpLang.Tests
 
             Assert.GreaterOrEqual(completed.TotalSeconds, 0.9, "Scheduled task started too soon");
             Assert.LessOrEqual(completed.TotalSeconds, 1.1, "Scheduled task completed too late");
-
-            Assert.Pass();
         }
 
         [Test]
-        public async Task TestSchedule_Cancel()
+        public async Task Schedule_Cancel()
         {
             var start = DateTime.UtcNow;
             var ran = false;
@@ -96,14 +99,66 @@ namespace SharpLang.Tests
             await Task.Delay(TimeSpan.FromSeconds(1.5));
 
             Assert.False(ran, "Task was not canceled");
-
-            Assert.Pass();
         }
 
+        [Test]
+        public async Task ScheduleOnInterval()
+        {
+            var ctr = 0;
+            using (fiber.ScheduleOnInterval(TimeSpan.FromSeconds(0.2), TimeSpan.FromSeconds(0.5), () => ctr++))
+            {
+                Assert.AreEqual(0, ctr);
 
+                await Task.Delay(TimeSpan.FromSeconds(0.3));
+                Assert.AreEqual(1, ctr);
 
-        // ScheduleOnInterval
+                await Task.Delay(TimeSpan.FromSeconds(0.5));
+                Assert.AreEqual(2, ctr);
 
-        // Lock
+                await Task.Delay(TimeSpan.FromSeconds(0.5));
+                Assert.AreEqual(3, ctr);
+
+                await Task.Delay(TimeSpan.FromSeconds(0.5));
+                Assert.AreEqual(4, ctr);
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(0.5));
+            Assert.AreEqual(4, ctr);
+        }
+
+        [Test]
+        public async Task Lock_Return()
+        {
+            this.fiber.QueueToRun(() => Task.Delay(TimeSpan.FromSeconds(1)));
+
+            var start = DateTime.UtcNow;
+
+            var actual = await this.fiber.Lock(() => 5);
+
+            var completed = DateTime.UtcNow - start;
+
+            Assert.GreaterOrEqual(completed.TotalSeconds, 0.9, "Locked task started too soon");
+            Assert.LessOrEqual(completed.TotalSeconds, 1.1, "Locked task completed too late");
+
+            Assert.AreEqual(5, actual, "Wrong value returned from Lock");
+        }
+
+        [Test]
+        public async Task Lock()
+        {
+            this.fiber.QueueToRun(() => Task.Delay(TimeSpan.FromSeconds(1)));
+
+            var start = DateTime.UtcNow;
+
+            var called = false;
+            await this.fiber.Lock(() => called = true);
+
+            var completed = DateTime.UtcNow - start;
+
+            Assert.GreaterOrEqual(completed.TotalSeconds, 0.9, "Locked task started too soon");
+            Assert.LessOrEqual(completed.TotalSeconds, 1.1, "Locked task completed too late");
+
+            Assert.IsTrue(called, "Locked statement not called");
+        }
     }
 }
