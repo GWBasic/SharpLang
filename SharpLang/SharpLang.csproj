@@ -45,6 +45,8 @@
     <Compile Include="Disposable.cs" />
     <Compile Include="BatchMessageHandler.cs" />
     <Compile Include="WrongFiberException.cs" />
+    <Compile Include="IEvent.cs" />
+    <Compile Include="IPublisher.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
