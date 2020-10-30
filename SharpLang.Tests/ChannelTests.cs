@@ -153,5 +153,45 @@ namespace SharpLang.Tests
             await Task.Delay(TimeSpan.FromSeconds(0.2));
             Assert.AreEqual(0, actual);
         }
+
+        [Test]
+        public async Task First()
+        {
+            await this.FirstOrLast(this.channel.With(this.fiber).First, 0);
+        }
+
+        [Test]
+        public async Task Last()
+        {
+            await this.FirstOrLast(this.channel.With(this.fiber).Last, 10);
+        }
+
+        private async Task FirstOrLast(Func<TimeSpan, MessageHandler<int>, IDisposable> firstOrLast, int expected)
+        {
+            int actual = int.MinValue;
+
+            using (firstOrLast(TimeSpan.FromSeconds(0.1), (_, i) => actual = i))
+            {
+                for (var ctr = 0; ctr < 5; ctr++)
+                {
+                    for (var i = 0; i <= 10; i++)
+                    {
+                        await this.channel.Publish(i);
+                    }
+
+                    Assert.AreEqual(int.MinValue, actual);
+
+                    await Task.Delay(TimeSpan.FromSeconds(0.2));
+
+                    Assert.AreEqual(expected, actual);
+
+                    actual = int.MinValue;
+                }
+            }
+
+            await this.channel.Publish(666);
+            await Task.Delay(TimeSpan.FromSeconds(0.2));
+            Assert.AreEqual(int.MinValue, actual);
+        }
     }
 }
