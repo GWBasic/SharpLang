@@ -139,6 +139,58 @@ namespace SharpLang
         }
 
         /// <summary>
+        /// Subscribes to the channel, but handles batches of messages based on the delay. Batches are keyed
+        /// </summary>
+        /// <param name="delay">Once a message is published, how long to wait to accumulate additional messages before calling the handler</param>
+        /// <param name="handler"></param>
+        /// <returns></returns>
+        public IDisposable Keyed<TKey>(TimeSpan delay, Func<TMessage, TKey> getKey, AsyncKeyedMessageHandler<TMessage, TKey> handler)
+        {
+            var me = this;
+            var fiber = this.fiber;
+
+            Dictionary<TKey, TMessage> keyedMessages = null;
+
+            AsyncMessageHandler<TMessage> batchedAdapter = (channel, message) =>
+            {
+                if (keyedMessages == null)
+                {
+                    keyedMessages = new Dictionary<TKey, TMessage>();
+
+                    fiber.ScheduleOnce(delay, async () =>
+                    {
+                        await handler(channel, keyedMessages);
+                        keyedMessages = null;
+                    });
+                }
+
+                keyedMessages[getKey(message)] = message;
+
+                return Task.FromResult<IntPtr>(IntPtr.Zero);
+            };
+
+            this.PublishedAsync += batchedAdapter;
+
+            return new Disposable(() => me.PublishedAsync -= batchedAdapter);
+        }
+
+
+        /// <summary>
+        /// Subscribes to the channel, but handles batches of messages based on the delay. Batches are keyed
+        /// </summary>
+        /// <param name="delay">Once a message is published, how long to wait to accumulate additional messages before calling the handler</param>
+        /// <param name="handler"></param>
+        /// <returns></returns>
+        public IDisposable Keyed<TKey>(TimeSpan delay, Func<TMessage, TKey> getKey, KeyedMessageHandler<TMessage, TKey> handler)
+        {
+            return this.Keyed(delay, getKey, (channel, message) =>
+            {
+                handler(channel, message);
+                return Task.FromResult(IntPtr.Zero);
+            });
+        }
+
+        /// <summary>
         /// Subscribes to the channel, but only handles the first message in a given time period
         /// </summary>
         /// <param name="delay"></param>
@@ -242,7 +294,5 @@ namespace SharpLang
                 return Task.FromResult(IntPtr.Zero);
             });
         }
-
-        // Keyed
     }
 }

@@ -49,6 +49,8 @@
     <Compile Include="IPublisher.cs" />
     <Compile Include="AsyncMessageHandler.cs" />
     <Compile Include="AsyncBatchMessageHandler.cs" />
+    <Compile Include="AsyncKeyedMessageHandler.cs" />
+    <Compile Include="KeyedMessageHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

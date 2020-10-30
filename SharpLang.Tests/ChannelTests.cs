@@ -155,6 +155,41 @@ namespace SharpLang.Tests
         }
 
         [Test]
+        public async Task Keyed()
+        {
+            IDictionary<int, int> actual = null;
+
+            using (this.channel.With(this.fiber).Keyed(TimeSpan.FromSeconds(0.1), i => i, (_, vals) => actual = vals))
+            {
+                for (var ctr = 0; ctr < 5; ctr++)
+                {
+                    await this.channel.Publish(1);
+                    await this.channel.Publish(10);
+                    await this.channel.Publish(100);
+
+                    Assert.AreEqual(0, actual);
+
+                    await Task.Delay(TimeSpan.FromSeconds(0.2));
+
+                    Assert.AreEqual(
+                        new Dictionary<int, int>()
+                        {
+                            { 1, 1 },
+                            { 10, 10 },
+                            { 100, 100 }
+                        },
+                        actual);
+
+                    actual = null;
+                }
+            }
+
+            await this.channel.Publish(666);
+            await Task.Delay(TimeSpan.FromSeconds(0.2));
+            Assert.IsNull(actual);
+        }
+
+        [Test]
         public async Task First()
         {
             await this.FirstOrLast(this.channel.With(this.fiber).First, 0);
