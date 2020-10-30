@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SharpLang
@@ -12,12 +13,22 @@ namespace SharpLang
         /// The task is queued to run and runs in the background in isolation
         /// </summary>
         /// <param name="task"></param>
-        void QueueToRun(Func<Task> task);
+        void QueueToRun(string name, Func<Task> task);
 
         /// <summary>
         /// The name of the fiber
         /// </summary>
         string Name { get; }
+
+        /// <summary>
+        /// The currently-running task, intended for debugging purposes
+        /// </summary>
+        string TaskName { get; }
+
+        /// <summary>
+        /// The current queue of tasks
+        /// </summary>
+        IEnumerable<string> TaskQueue { get; }
 
         /// <summary>
         /// True if the code is currently running on the fiber
@@ -31,9 +42,9 @@ namespace SharpLang
         /// The task is queued to run and runs in the background in isolation
         /// </summary>
         /// <param name="task"></param>
-        public static void QueueToRun(this IFiber fiber, Action task)
+        public static void QueueToRun(this IFiber fiber, string name, Action task)
         {
-            fiber.QueueToRun(() =>
+            fiber.QueueToRun(name, () =>
             {
                 task();
                 return Task.FromResult(IntPtr.Zero);
@@ -46,7 +57,7 @@ namespace SharpLang
         /// <param name="delay">How long to wait until running the task</param>
         /// <param name="task">The task to run</param>
         /// <returns></returns>
-        public static IDisposable ScheduleOnce(this IFiber fiber, TimeSpan delay, Func<Task> task)
+        public static IDisposable ScheduleOnce(this IFiber fiber, string name, TimeSpan delay, Func<Task> task)
         {
             var keepRunning = true;
 
@@ -56,7 +67,7 @@ namespace SharpLang
 
                 if (keepRunning)
                 {
-                    fiber.QueueToRun(task);
+                    fiber.QueueToRun(name, task);
                 }
             });
 
@@ -69,9 +80,9 @@ namespace SharpLang
         /// <param name="delay">How long to wait until running the task</param>
         /// <param name="task">The task to run</param>
         /// <returns></returns>
-        public static IDisposable ScheduleOnce(this IFiber fiber, TimeSpan delay, Action task)
+        public static IDisposable ScheduleOnce(this IFiber fiber, string name, TimeSpan delay, Action task)
         {
-            return fiber.ScheduleOnce(delay, () =>
+            return fiber.ScheduleOnce(name, delay, () =>
             {
                 task();
                 return Task.FromResult<IntPtr>(IntPtr.Zero);
@@ -85,7 +96,7 @@ namespace SharpLang
         /// <param name="interval">How often to run the task</param>
         /// <param name="task">The task to run</param>
         /// <returns></returns>
-        public static IDisposable ScheduleOnInterval(this IFiber fiber, TimeSpan? delay, TimeSpan interval, Func<Task> task)
+        public static IDisposable ScheduleOnInterval(this IFiber fiber, string name, TimeSpan? delay, TimeSpan interval, Func<Task> task)
         {
             var keepRunning = true;
 
@@ -95,7 +106,7 @@ namespace SharpLang
 
                 while (keepRunning)
                 {
-                    fiber.QueueToRun(task);
+                    fiber.QueueToRun(name, task);
                     await Task.Delay(interval);
                 }
             });
@@ -111,9 +122,9 @@ namespace SharpLang
         /// <param name="interval">How often to run the task</param>
         /// <param name="task">The task to run</param>
         /// <returns></returns>
-        public static IDisposable ScheduleOnInterval(this IFiber fiber, TimeSpan? delay, TimeSpan interval, Action task)
+        public static IDisposable ScheduleOnInterval(this IFiber fiber, string name, TimeSpan? delay, TimeSpan interval, Action task)
         {
-            return fiber.ScheduleOnInterval(delay, interval, () =>
+            return fiber.ScheduleOnInterval(name, delay, interval, () =>
             {
                 task();
                 return Task.FromResult(IntPtr.Zero);
@@ -125,11 +136,11 @@ namespace SharpLang
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static Task<T> Lock<T>(this IFiber fiber, Func<Task<T>> task)
+        public static Task<T> Lock<T>(this IFiber fiber, string name, Func<Task<T>> task)
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
 
-            fiber.QueueToRun(async () =>
+            fiber.QueueToRun(name, async () =>
             {
                 try
                 {
@@ -149,9 +160,9 @@ namespace SharpLang
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static Task<T> Lock<T>(this IFiber fiber, Func<T> task)
+        public static Task<T> Lock<T>(this IFiber fiber, string name, Func<T> task)
         {
-            return fiber.Lock<T>(() => Task.FromResult(task()));
+            return fiber.Lock<T>(name, () => Task.FromResult(task()));
         }
 
         /// <summary>
@@ -159,9 +170,9 @@ namespace SharpLang
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static Task Lock(this IFiber fiber, Func<Task> task)
+        public static Task Lock(this IFiber fiber, string name, Func<Task> task)
         {
-            return fiber.Lock<IntPtr>(async () =>
+            return fiber.Lock<IntPtr>(name, async () =>
             {
                 await task();
                 return IntPtr.Zero;
@@ -173,9 +184,9 @@ namespace SharpLang
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        public static Task Lock(this IFiber fiber, Action task)
+        public static Task Lock(this IFiber fiber, string name, Action task)
         {
-            return fiber.Lock(() => Task.FromResult(IntPtr.Zero) as Task);
+            return fiber.Lock(name,() => Task.FromResult(IntPtr.Zero) as Task);
         }
 
         /// <summary>

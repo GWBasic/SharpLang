@@ -15,28 +15,49 @@ namespace SharpLang
         }
 
         private object sync = new object();
-        private Queue<Func<Task>> taskQueue = null;
+        private Queue<TaskAndName> taskQueue = null;
+
+        private class TaskAndName
+        {
+            public string name;
+            public Func<Task> task;
+        }
+
         private int? currentTaskId = null;
 
+        /// <summary>
+        /// The name of the fiber
+        /// </summary>
         public string Name { get; }
+
+        /// <summary>
+        /// The currently-executing task, or null if no task is executing
+        /// </summary>
+        public string TaskName { get; private set; }
 
         /// <summary>
         /// Queues the task to run on the fiber
         /// </summary>
         /// <param name="task"></param>
-        public void QueueToRun(Func<Task> task)
+        public void QueueToRun(string name, Func<Task> task)
         {
+            var taskAndName = new TaskAndName()
+            {
+                name = name,
+                task = task
+            };
+
             lock (this.sync)
             {
                 if (this.taskQueue == null)
                 {
-                    this.taskQueue = new Queue<Func<Task>>();
-                    this.taskQueue.Enqueue(task);
+                    this.taskQueue = new Queue<TaskAndName>();
+                    this.taskQueue.Enqueue(taskAndName);
                     Task.Run(this.RunTaskQueue);
                 }
                 else
                 {
-                    this.taskQueue.Enqueue(task);
+                    this.taskQueue.Enqueue(taskAndName);
                 }
             }
         }
@@ -49,7 +70,7 @@ namespace SharpLang
             {
                 while (true)
                 {
-                    Func<Task> task;
+                    TaskAndName taskAndName;
 
                     lock (this.sync)
                     {
@@ -59,12 +80,14 @@ namespace SharpLang
                             return;
                         }
 
-                        task = this.taskQueue.Dequeue();
+                        taskAndName = this.taskQueue.Dequeue();
                     }
+
+                    this.TaskName = taskAndName.name;
 
                     try
                     {
-                        await task();
+                        await taskAndName.task();
                     }
                     catch (Exception exception)
                     {
@@ -74,6 +97,7 @@ namespace SharpLang
             }
             finally
             {
+                this.TaskName = null;
                 this.currentTaskId = null;
             }
         }
