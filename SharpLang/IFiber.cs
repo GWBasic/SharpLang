@@ -13,6 +13,16 @@ namespace SharpLang
         /// </summary>
         /// <param name="task"></param>
         void QueueToRun(Func<Task> task);
+
+        /// <summary>
+        /// The name of the fiber
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
+        /// True if the code is currently running on the fiber
+        /// </summary>
+        bool IsOnFiber { get; }
     }
 
     public static class FiberEx
@@ -189,6 +199,18 @@ namespace SharpLang
             });
 
             return taskCompletionSource.Task;
+        }
+
+        /// <summary>
+        /// Asserts that the code is being called on the fiber
+        /// </summary>
+        /// <param name="fiber"></param>
+        public static void AssertOnFiber(this IFiber fiber)
+        {
+            if (!fiber.IsOnFiber)
+            {
+                throw new WrongFiberException(fiber);
+            }
         }
     }
 }

@@ -9,8 +9,16 @@ namespace SharpLang
     /// </summary>
     public class Fiber : IFiber
     {
+        public Fiber(string name)
+        {
+            this.Name = name;
+        }
+
         private object sync = new object();
         private Queue<Func<Task>> taskQueue = null;
+        private int? currentTaskId = null;
+
+        public string Name { get; }
 
         /// <summary>
         /// Queues the task to run on the fiber
@@ -35,29 +43,38 @@ namespace SharpLang
 
         private async Task RunTaskQueue()
         {
-            while (true)
-            {
-                Func<Task> task;
+            this.currentTaskId = Task.CurrentId;
 
-                lock (this.sync)
+            try
+            {
+                while (true)
                 {
-                    if (this.taskQueue.Count == 0)
+                    Func<Task> task;
+
+                    lock (this.sync)
                     {
-                        this.taskQueue = null;
-                        return;
+                        if (this.taskQueue.Count == 0)
+                        {
+                            this.taskQueue = null;
+                            return;
+                        }
+
+                        task = this.taskQueue.Dequeue();
                     }
 
-                    task = this.taskQueue.Dequeue();
+                    try
+                    {
+                        await task();
+                    }
+                    catch (Exception exception)
+                    {
+                        (this.ExceptionHandler ?? Fiber.DefaultExceptionHandler)(exception);
+                    }
                 }
-
-                try
-                {
-                    await task();
-                }
-                catch (Exception exception)
-                {
-                    (this.ExceptionHandler ?? Fiber.DefaultExceptionHandler)(exception);
-                }
+            }
+            finally
+            {
+                this.currentTaskId = null;
             }
         }
 
@@ -80,6 +97,21 @@ namespace SharpLang
                 }
 
                 Fiber.defaultExceptionHandler = value;
+            }
+        }
+
+        public bool IsOnFiber
+        {
+            get
+            {
+                var currentTaskId = this.currentTaskId;
+
+                if (currentTaskId == null)
+                {
+                    return false;
+                }
+
+                return currentTaskId == Task.CurrentId;
             }
         }
 

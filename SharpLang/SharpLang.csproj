@@ -44,6 +44,7 @@
     <Compile Include="Subscriber.cs" />
     <Compile Include="Disposable.cs" />
     <Compile Include="BatchMessageHandler.cs" />
+    <Compile Include="WrongFiberException.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

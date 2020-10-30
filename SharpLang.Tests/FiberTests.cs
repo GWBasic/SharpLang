@@ -10,7 +10,7 @@ namespace SharpLang.Tests
 {
     public class FiberTests
     {
-        Fiber fiber = new Fiber();
+        Fiber fiber = new Fiber("Test Fiber");
         List<Exception> exceptions = new List<Exception>();
 
         public FiberTests()
@@ -159,6 +159,61 @@ namespace SharpLang.Tests
             Assert.LessOrEqual(completed.TotalSeconds, 1.1, "Locked task completed too late");
 
             Assert.IsTrue(called, "Locked statement not called");
+        }
+
+
+        [Test]
+        public void Lock_Exception()
+        {
+            Assert.Inconclusive("Incomplete");
+        }
+
+        [Test]
+        public async Task IsOnFiber()
+        {
+            // Fiber queue is empty
+            Assert.IsFalse(this.fiber.IsOnFiber);
+
+            var taskCompletionSource_FiberStarted = new TaskCompletionSource<IntPtr>();
+            var taskCompletionSource_EndQueued = new TaskCompletionSource<IntPtr>();
+
+            fiber.QueueToRun(async () =>
+            {
+                taskCompletionSource_FiberStarted.SetResult(IntPtr.Zero);
+                await taskCompletionSource_EndQueued.Task;
+            });
+
+            // Fiber is running item on queue
+            await taskCompletionSource_FiberStarted.Task;
+
+            try
+            {
+                Assert.IsFalse(this.fiber.IsOnFiber);
+            }
+            finally
+            {
+                taskCompletionSource_EndQueued.SetResult(IntPtr.Zero);
+            }
+
+            // Running in the fiber
+            await this.fiber.Lock(() => Assert.IsTrue(this.fiber.IsOnFiber));
+
+            // Running in another task
+            await Task.Run(() => Assert.IsFalse(this.fiber.IsOnFiber));
+
+            // Running in a task started in the fiber
+            await this.fiber.Lock(async () =>
+            {
+                await Task.Run(() => Assert.IsFalse(this.fiber.IsOnFiber));
+            });
+        }
+
+        [Test]
+        public async Task AssertOnFiber()
+        {
+            await this.fiber.Lock(this.fiber.AssertOnFiber);
+
+            Assert.Throws<WrongFiberException>(this.fiber.AssertOnFiber);
         }
     }
 }
