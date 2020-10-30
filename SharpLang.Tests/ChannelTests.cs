@@ -10,12 +10,12 @@ using SharpLang;
 namespace SharpLang.Tests
 {
     [TestFixture]
-    public class SubscriberTests
+    public class ChannelTests
     {
         private Fiber fiber;
         private Channel<int> channel;
 
-        public SubscriberTests()
+        public ChannelTests()
         {
         }
 
