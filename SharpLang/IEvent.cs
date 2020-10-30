@@ -9,12 +9,12 @@ namespace SharpLang
         /// <summary>
         /// Allows handling the message on the thread (fiber) before the message is published to other fibers
         /// </summary>
-        event MessageHandler<TMessage> BeforePublished;
+        event AsyncMessageHandler<TMessage> BeforePublished;
 
         /// <summary>
         /// Allows handling the message on the thread (fiber) after the message is published is published to other fibers
         /// </summary>
-        event MessageHandler<TMessage> AfterPublished;
+        event AsyncMessageHandler<TMessage> AfterPublished;
 
         /// <summary>
         /// Use to subscribe to the channel on a fiber

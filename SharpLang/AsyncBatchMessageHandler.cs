@@ -9,5 +9,5 @@ namespace SharpLang
     /// </summary>
     /// <typeparam name="TMessage">The message type</typeparam>
     /// <param name="batch">The batch of messages</param>
-    public delegate void BatchMessageHandler<TMessage>(IChannel<TMessage> channel, IEnumerable<TMessage> batch);
+    public delegate Task AsyncBatchMessageHandler<TMessage>(IChannel<TMessage> channel, IEnumerable<TMessage> batch);
 }

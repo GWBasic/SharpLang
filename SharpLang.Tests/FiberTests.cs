@@ -8,6 +8,7 @@ using SharpLang;
 
 namespace SharpLang.Tests
 {
+    [TestFixture]
     public class FiberTests
     {
         Fiber fiber = new Fiber("Test Fiber");

@@ -8,5 +8,5 @@ namespace SharpLang
     /// </summary>
     /// <typeparam name="TMessage">The message type</typeparam>
     /// <param name="message">The message</param>
-    public delegate void MessageHandler<TMessage>(IChannel<TMessage> channel, TMessage message);
+    public delegate Task AsyncMessageHandler<TMessage>(IChannel<TMessage> channel, TMessage message);
 }

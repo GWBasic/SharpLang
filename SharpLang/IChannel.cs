@@ -9,6 +9,9 @@ namespace SharpLang
     /// <typeparam name="TMessage"></typeparam>
     public interface IChannel<TMessage> : IEvent<TMessage>, IPublisher<TMessage>
     {
+        internal void Subscribe(IFiber fiber, AsyncMessageHandler<TMessage> handler);
+        internal void Unsubscribe(IFiber fiber, AsyncMessageHandler<TMessage> handler);
+
         internal void Subscribe(IFiber fiber, MessageHandler<TMessage> handler);
         internal void Unsubscribe(IFiber fiber, MessageHandler<TMessage> handler);
     }

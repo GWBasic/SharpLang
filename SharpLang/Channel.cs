@@ -15,18 +15,23 @@ namespace SharpLang
 
         public string Name { get; }
 
-        public Dictionary<IFiber, HashSet<MessageHandler<TMessage>>> subscriptions = new Dictionary<IFiber, HashSet<MessageHandler<TMessage>>>();
+        public Dictionary<IFiber, HashSet<AsyncMessageHandler<TMessage>>> asyncSubscriptions = new Dictionary<IFiber, HashSet<AsyncMessageHandler<TMessage>>>();
+        public Dictionary<IFiber, HashSet<MessageHandler<TMessage>>> syncSubscriptions = new Dictionary<IFiber, HashSet<MessageHandler<TMessage>>>();
 
-        public event MessageHandler<TMessage> BeforePublished;
-        public event MessageHandler<TMessage> AfterPublished;
+        public event AsyncMessageHandler<TMessage> BeforePublished;
+        public event AsyncMessageHandler<TMessage> AfterPublished;
 
         public async Task Publish(TMessage message)
         {
-            await this.BeforePublished?.Invoke(this, message);
+            var beforePublished = this.BeforePublished;
+            if (beforePublished != null)
+            {
+                await beforePublished.Invoke(this, message);
+            }
 
             lock (this.sync)
             {
-                foreach (var kvp in this.subscriptions)
+                foreach (var kvp in this.asyncSubscriptions)
                 {
                     var subscriptionsForFiber = kvp.Value;
                     var fiber = kvp.Key;
@@ -36,9 +41,24 @@ namespace SharpLang
                         fiber.QueueToRun(async () => await handler(this, message));
                     }
                 }
+
+                foreach (var kvp in this.syncSubscriptions)
+                {
+                    var subscriptionsForFiber = kvp.Value;
+                    var fiber = kvp.Key;
+
+                    foreach (var handler in subscriptionsForFiber)
+                    {
+                        fiber.QueueToRun(() => handler(this, message));
+                    }
+                }
             }
 
-            await this.AfterPublished?.Invoke(this, message);
+            var afterPublished = this.AfterPublished;
+            if (afterPublished != null)
+            {
+                await afterPublished.Invoke(this, message);
+            }
         }
 
         public Subscriber<TMessage> With(IFiber fiber)
@@ -46,14 +66,44 @@ namespace SharpLang
             return new Subscriber<TMessage>(this, fiber);
         }
 
+        void IChannel<TMessage>.Subscribe(IFiber fiber, AsyncMessageHandler<TMessage> handler)
+        {
+            lock (this.sync)
+            {
+                if (!this.asyncSubscriptions.TryGetValue(fiber, out var subscriptionsForFiber))
+                {
+                    subscriptionsForFiber = new HashSet<AsyncMessageHandler<TMessage>>();
+                    this.asyncSubscriptions[fiber] = subscriptionsForFiber;
+                }
+
+                subscriptionsForFiber.Add(handler);
+            }
+        }
+
+        void IChannel<TMessage>.Unsubscribe(IFiber fiber, AsyncMessageHandler<TMessage> handler)
+        {
+            lock (this.sync)
+            {
+                if (this.asyncSubscriptions.TryGetValue(fiber, out var subscriptionsForFiber))
+                {
+                    subscriptionsForFiber.Remove(handler);
+
+                    if (subscriptionsForFiber.Count == 0)
+                    {
+                        this.asyncSubscriptions.Remove(fiber);
+                    }
+                }
+            }
+        }
+
         void IChannel<TMessage>.Subscribe(IFiber fiber, MessageHandler<TMessage> handler)
         {
             lock (this.sync)
             {
-                if (!this.subscriptions.TryGetValue(fiber, out var subscriptionsForFiber))
+                if (!this.syncSubscriptions.TryGetValue(fiber, out var subscriptionsForFiber))
                 {
                     subscriptionsForFiber = new HashSet<MessageHandler<TMessage>>();
-                    this.subscriptions[fiber] = subscriptionsForFiber;
+                    this.syncSubscriptions[fiber] = subscriptionsForFiber;
                 }
 
                 subscriptionsForFiber.Add(handler);
@@ -64,13 +114,13 @@ namespace SharpLang
         {
             lock (this.sync)
             {
-                if (this.subscriptions.TryGetValue(fiber, out var subscriptionsForFiber))
+                if (this.syncSubscriptions.TryGetValue(fiber, out var subscriptionsForFiber))
                 {
                     subscriptionsForFiber.Remove(handler);
 
                     if (subscriptionsForFiber.Count == 0)
                     {
-                        this.subscriptions.Remove(fiber);
+                        this.syncSubscriptions.Remove(fiber);
                     }
                 }
             }

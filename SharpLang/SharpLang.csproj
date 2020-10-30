@@ -47,6 +47,8 @@
     <Compile Include="WrongFiberException.cs" />
     <Compile Include="IEvent.cs" />
     <Compile Include="IPublisher.cs" />
+    <Compile Include="AsyncMessageHandler.cs" />
+    <Compile Include="AsyncBatchMessageHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

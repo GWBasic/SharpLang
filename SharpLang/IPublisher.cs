@@ -10,10 +10,11 @@ namespace SharpLang
     public interface IPublisher<TMessage>
     {
         /// <summary>
-        /// Publishes the message. Waits until all synchronous handlers complete, does not block for asynchronous handlers
+        /// Publishes the message. Waits until all synchronous handlers complete, does not block for asynchronous handlers.
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
+        /// <remarks>Tasks will be queued into fibers before this returns</remarks>
         Task Publish(TMessage message);
     }
 }

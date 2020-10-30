@@ -9,9 +9,10 @@ namespace SharpLang
     public interface IFiber
     {
         /// <summary>
-        /// The task is queued to run and runs in the background in isolation
+        /// The task is queued to run and runs in the background in isolation.
         /// </summary>
         /// <param name="task"></param>
+        /// <remarks>The task must be inserted into the queue synchronously.</remarks>
         void QueueToRun(Func<Task> task);
 
         /// <summary>
