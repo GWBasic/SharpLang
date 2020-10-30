@@ -161,11 +161,24 @@ namespace SharpLang.Tests
             Assert.IsTrue(called, "Locked statement not called");
         }
 
+        private class Lock_Exception_ForTest : Exception
+        {
+
+        }
 
         [Test]
         public void Lock_Exception()
         {
-            Assert.Inconclusive("Incomplete");
+            var expected = new Lock_Exception_ForTest();
+
+            try
+            {
+                this.fiber.Lock(() => throw expected);
+            }
+            catch (Lock_Exception_ForTest actual)
+            {
+                Assert.AreSame(expected, actual);
+            }
         }
 
         [Test]
