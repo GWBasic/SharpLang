@@ -18,6 +18,8 @@ namespace SharpLang.Tests
             this.fiber.ExceptionHandler = exceptions.Add;
         }
 
+        private class TestException : Exception { }
+
         [SetUp]
         public void SetUp()
         {
@@ -161,21 +163,16 @@ namespace SharpLang.Tests
             Assert.IsTrue(called, "Locked statement not called");
         }
 
-        private class Lock_Exception_ForTest : Exception
-        {
-
-        }
-
         [Test]
         public void Lock_Exception()
         {
-            var expected = new Lock_Exception_ForTest();
+            var expected = new TestException();
 
             try
             {
                 this.fiber.Lock(() => throw expected);
             }
-            catch (Lock_Exception_ForTest actual)
+            catch (TestException actual)
             {
                 Assert.AreSame(expected, actual);
             }
@@ -227,6 +224,30 @@ namespace SharpLang.Tests
             await this.fiber.Lock(this.fiber.AssertOnFiber);
 
             Assert.Throws<WrongFiberException>(this.fiber.AssertOnFiber);
+        }
+
+        [Test]
+        public async Task ExceptionHandler()
+        {
+            var taskCompletionSource = new TaskCompletionSource<IntPtr>();
+
+            var expected = new TestException();
+
+            fiber.QueueToRun(() => throw expected);
+            fiber.QueueToRun(() => taskCompletionSource.SetResult(IntPtr.Zero));
+
+            await taskCompletionSource.Task;
+
+            Assert.AreEqual(1, this.exceptions.Count);
+
+            try
+            {
+                Assert.AreEqual(expected, this.exceptions[0]);
+            }
+            finally
+            {
+                this.exceptions.Clear();
+            }
         }
     }
 }
