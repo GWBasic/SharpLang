@@ -167,7 +167,7 @@ namespace SharpLang.Tests
                     await this.channel.Publish(10);
                     await this.channel.Publish(100);
 
-                    Assert.AreEqual(0, actual);
+                    Assert.IsNull(actual);
 
                     await Task.Delay(TimeSpan.FromSeconds(0.2));
 
