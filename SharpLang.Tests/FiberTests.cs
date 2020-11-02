@@ -77,7 +77,7 @@ namespace SharpLang.Tests
         }
 
         [Test]
-        public async Task Schedule()
+        public async Task ScheduleOnce()
         {
             var taskCompletionSource = new TaskCompletionSource<IntPtr>();
 
@@ -93,7 +93,7 @@ namespace SharpLang.Tests
         }
 
         [Test]
-        public async Task Schedule_Cancel()
+        public async Task ScheduleOnce_Cancel()
         {
             var start = DateTime.UtcNow;
             var ran = false;

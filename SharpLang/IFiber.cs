@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SharpLang
@@ -49,19 +50,16 @@ namespace SharpLang
         /// <returns></returns>
         public static IDisposable ScheduleOnce(this IFiber fiber, TimeSpan delay, Func<Task> task)
         {
-            var keepRunning = true;
+            var cancelationTokenSource = new CancellationTokenSource();
+            var cancelationToken = cancelationTokenSource.Token;
 
             Task.Run(async () =>
             {
-                await Task.Delay(delay);
-
-                if (keepRunning)
-                {
-                    fiber.QueueToRun(task);
-                }
+                await Task.Delay(delay, cancelationToken);
+                fiber.QueueToRun(task);
             });
 
-            return new Disposable(() => keepRunning = false);
+            return new Disposable(cancelationTokenSource.Cancel);
         }
 
         /// <summary>
@@ -88,20 +86,23 @@ namespace SharpLang
         /// <returns></returns>
         public static IDisposable ScheduleOnInterval(this IFiber fiber, TimeSpan? delay, TimeSpan interval, Func<Task> task)
         {
-            var keepRunning = true;
+            var cancelationTokenSource = new CancellationTokenSource();
+            var cancelationToken = cancelationTokenSource.Token;
 
             Task.Run(async () =>
             {
-                await Task.Delay(delay ?? interval);
 
-                while (keepRunning)
+                await Task.Delay(delay ?? interval, cancelationToken);
+
+                do
                 {
                     fiber.QueueToRun(task);
-                    await Task.Delay(interval);
-                }
+                    await Task.Delay(interval, cancelationToken);
+
+                } while (!cancelationToken.IsCancellationRequested);
             });
 
-            return new Disposable(() => keepRunning = false);
+            return new Disposable(cancelationTokenSource.Cancel);
         }
 
 
